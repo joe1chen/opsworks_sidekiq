@@ -29,15 +29,16 @@ node[:deploy].each do |application, deploy|
 
   if node[:sidekiq][application]
 
-    workers = JSON.parse(node[:sidekiq][application].to_json)
-    workers.reject! {|k,v| k.to_s =~ /restart_command|syslog/ }
+    workers = node[:sidekiq][application].to_hash.reject {|k,v| k.to_s =~ /restart_command|syslog/ }
     config_directory = "#{deploy[:deploy_to]}/shared/config"
 
     workers.each do |worker, options|
 
       # Convert attribute classes to plain old ruby objects
-      config = options[:config] ? options[:config] : {}
-      yaml = config.to_yaml
+      config = options[:config] ? options[:config].to_hash : {}
+
+      mutable_config = JSON.parse(config.dup.to_json)
+      yaml = mutable_config.to_yaml
 
       # Convert YAML string keys to symbol keys for sidekiq while preserving
       # indentation. (queues: to :queues:)
